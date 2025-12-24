@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "name": "sbibm",
+            "type": "python",
+            "request": "launch",
+            "program": "run_sbibm.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}/flow-matching-posterior-estimation/sbi-benchmark",
+            "args": [
+                "--train_dir", "/home/vrlab/GW/flow_matching/experiment/MM-DiT/gaussian_linear",
+            ]
+        }
+    ]
+}
