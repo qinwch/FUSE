@@ -20,4 +20,4 @@ python run_sbibm.py --train_dir </path/to/train_dir>
 ```
 
 where the training directory contains a `settings.yaml` file. Example settings can be 
-found in `./sbi-benchmark/settings.yaml`.
+found in `./flow-matching-posterior-estimation/sbi-benchmark/settings.yaml`.
