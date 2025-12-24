@@ -233,17 +233,17 @@ if __name__ == "__main__":
         settings["training"]["num_workers"],
     )
 
-    # model = train_model(
-    #     args.train_dir,
-    #     settings=settings,
-    #     train_loader=train_loader,
-    #     test_loader=test_loader,
-    #     use_wandb=use_wandb,
-    # )
-
-    model = build_model_from_kwargs(
-        filename=join(args.train_dir, "best_model.pt"),
-        device=settings["training"].get("device", "cpu"),
+    model = train_model(
+        args.train_dir,
+        settings=settings,
+        train_loader=train_loader,
+        test_loader=test_loader,
+        use_wandb=use_wandb,
     )
+
+    # model = build_model_from_kwargs(
+    #     filename=join(args.train_dir, "best_model.pt"),
+    #     device=settings["training"].get("device", "cpu"),
+    # )
 
     evaluate_model(args.train_dir, settings, dataset, model, use_wandb=use_wandb)
