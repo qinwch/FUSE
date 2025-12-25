@@ -230,10 +230,10 @@ def create_cf_model(
             context_dim=real_context_dim,
             
             # Transformer
-            hidden_dim=256,
-            depth=4,
-            heads=4,
-            num_tokens=1,
+            hidden_dim=posterior_kwargs["hidden_dims"],
+            depth=posterior_kwargs["depth"],
+            heads=posterior_kwargs["heads"],
+            num_tokens=posterior_kwargs["num_tokens"],
         )
         # total_params = sum(p.numel() for p in continuous_flow.parameters() if p.requires_grad)
         # print(f"Total trainable parameters: {total_params}")

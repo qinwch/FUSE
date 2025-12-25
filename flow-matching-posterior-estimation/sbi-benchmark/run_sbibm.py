@@ -15,6 +15,7 @@ import numpy as np
 import yaml
 import wandb
 from torch.utils.data import Dataset
+from joblib import Parallel, delayed
 
 from dingo.core.posterior_models.build_model import (
     build_model_from_kwargs,
@@ -22,6 +23,7 @@ from dingo.core.posterior_models.build_model import (
 )
 from dingo.core.utils import build_train_and_test_loaders, RuntimeLimits
 
+# from c2st import c2st
 
 class SbiDataset(Dataset):
     def __init__(self, theta, x):
@@ -52,6 +54,17 @@ class SbiDataset(Dataset):
         return self.theta[idx], self.x[idx]
 
 
+# def generate_single_batch(task, batch_size):
+#     """
+#     Generate one batch of samples
+#     """
+#     prior = task.get_prior()
+#     simulator = task.get_simulator()
+    
+#     theta_sample = prior(batch_size)
+#     x_sample = simulator(theta_sample)
+#     return theta_sample, x_sample
+
 def generate_dataset(settings, batch_size=1, directory_save=None):
     """
     Generate dataset for the given SBI benchmark task by the package sbibm.
@@ -59,7 +72,7 @@ def generate_dataset(settings, batch_size=1, directory_save=None):
 
     task = sbibm.get_task(settings["task"]["name"])
     prior = task.get_prior()
-    simulator = task.get_simulator()
+    simulator = task.get_simulator()    
     num_train_samples = settings["task"]["num_train_samples"]
     nr_batches = math.ceil(num_train_samples / batch_size)
     theta = []
@@ -69,6 +82,14 @@ def generate_dataset(settings, batch_size=1, directory_save=None):
         x_sample = simulator(theta_sample)
         theta.append(theta_sample)
         x.append(x_sample)
+
+    # print(f"Generating {nr_batches} batches in parallel...")
+    # results = Parallel(n_jobs=24, verbose=10)(
+    #     delayed(generate_single_batch)(task, batch_size) for _ in range(nr_batches)
+    # )
+
+    # theta_list, x_list = zip(*results)
+
     x = np.vstack(x)[:num_train_samples]
     theta = np.vstack(theta)[:num_train_samples]
     if directory_save is not None:
@@ -221,10 +242,12 @@ if __name__ == "__main__":
     use_wandb = settings["training"].get("wandb")
     if use_wandb:
         import wandb
-
         wandb.init(config=settings, dir=args.train_dir, **settings["training"]["wandb"])
 
-    dataset = generate_dataset(settings)
+    if settings["task"]["name"] == "lotka_volterra":
+        dataset = load_dataset(directory_save="/home/vrlab/GW/flowmatching_record/experiment/lotka_volterra_dataset", settings=settings)
+    else:
+        dataset = generate_dataset(settings)
 
     train_loader, test_loader = build_train_and_test_loaders(
         dataset,
