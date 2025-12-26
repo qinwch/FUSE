@@ -9,7 +9,7 @@ from dingo.core.nn.enets import create_enet_with_projection_layer_and_dense_resn
 from typing import Union, Callable
 
 from dingo.core.nn.enets import DenseResidualNet
-from dingo.core.nn.mmdit import DingoMMDiT
+from dingo.core.nn.mmdit import DingoMMDiT, DingoMMDiTV2
 
 # Autocomplete model kwargs necessary?
 
@@ -108,7 +108,6 @@ class ContinuousFlowModel(nn.Module):
 
     def forward(self, t, theta, *context):
         # embed theta (self.embedding_net_theta might just be identity)
-        t_and_theta_embedding = torch.cat((t.unsqueeze(1), theta), dim=1)
         t_and_theta_embedding = self.theta_embedding_net(t_and_theta_embedding)
         # for unconditional forward pass
         if len(context) == 0:
@@ -124,8 +123,6 @@ class ContinuousFlowModel(nn.Module):
             self._update_cached_context(*context)
             context_embedding = self._get_cached_context_embedding(batch_size=len(context[0]))
 
-        if len(t_and_theta_embedding.shape) != 2 or len(context_embedding.shape) != 2:
-            raise NotImplementedError()
 
         # print(context_embedding.device, t_and_theta_embedding.device)
         context_embedding = context_embedding.to(t_and_theta_embedding.device)
@@ -155,6 +152,42 @@ class ContinuousFlowModel(nn.Module):
         else:
             return self.continuous_flow(input, glu_context)
 
+class ContinuousFlowModelV2(nn.Module):
+    """
+    This class wraps the continuous flow models. It combines an embedding net and a continuous flow model that
+     learns a vector field (score or flow).
+
+    Methods
+    -------
+
+    set_embedding:
+        infers and caches the embedding of the given context
+    get_embedding:
+        infers the embedding of given context, returns cached context if no context is provided
+    forward:
+        calls model, evaluates first the embedding and then the continuous flow
+    """
+
+    def __init__(
+        self,
+        continuous_flow: nn.Module,
+    ):
+        """
+        TODO
+        :param  continuous_flow: nn.Module
+        :param embedding_net: nn.Module
+        """
+        super(ContinuousFlowModelV2, self).__init__()
+        self.continuous_flow = continuous_flow
+
+    def forward(self, t, theta, *context):
+        # embed theta (self.embedding_net_theta might just be identity)
+        # print(t.device, theta.device, context[0].device)
+        # print("t shape:", t.shape)
+        # print("theta shape:", theta.shape)
+        # print("context[0] shape:", context[0].shape)
+        # print("context length:", len(context))
+        return self.continuous_flow(theta, t, *context)
 
 def create_cf_model(
     posterior_kwargs: dict, embedding_kwargs: dict = None, initial_weights: dict = None
@@ -180,64 +213,71 @@ def create_cf_model(
     :return: ContinuousFlowModel
         the cf (posterior model)
     """
-    theta_dim = posterior_kwargs["input_dim"]
-    context_dim = posterior_kwargs["context_dim"]
 
-    # get embeddings modules for context
-    if embedding_kwargs is not None:
-        context_embedding_kwargs = copy.deepcopy(embedding_kwargs)
-        if initial_weights is not None:
-            context_embedding_kwargs["V_rb_list"] = initial_weights["V_rb_list"]
-        elif "V_rb_list" not in context_embedding_kwargs:
-            context_embedding_kwargs["V_rb_list"] = None
-
-        context_embedding = create_enet_with_projection_layer_and_dense_resnet(
-            **context_embedding_kwargs
-        )
-    else:
-        context_embedding = torch.nn.Identity()
-
-    # get embeddings modules for theta (which is actually cat(t, theta))
-    if "theta_embedding_kwargs" in posterior_kwargs:
-        theta_embedding = get_theta_embedding_net(
-            posterior_kwargs["theta_embedding_kwargs"],
-            input_dim=theta_dim + 1,
-        )
-    else:
-        theta_embedding = torch.nn.Identity()
-
-    # get output dimensions of embedded context and theta
-    theta_with_glu = posterior_kwargs.get("theta_with_glu", False)
-    context_with_glu = posterior_kwargs.get("context_with_glu", False)
-    embedded_theta_dim = theta_embedding(torch.zeros(10, theta_dim + 1)).shape[1]
-
-    glu_dim = theta_with_glu * embedded_theta_dim + context_with_glu * context_dim
-    input_dim = embedded_theta_dim + context_dim - glu_dim
-    if glu_dim == 0:
-        glu_dim = None
-
-    activation_fn = torchutils.get_activation_function_from_string(
-        posterior_kwargs["activation"]
-    )
-
-    real_context_dim = posterior_kwargs["context_dim"] 
-    total_input_dim = real_context_dim + embedded_theta_dim
 
     if posterior_kwargs.get("type") == "mmdit":
-        continuous_flow = DingoMMDiT(
-            input_dim=total_input_dim,
-            output_dim=theta_dim,
-            context_dim=real_context_dim,
-            
+        theta_dim = posterior_kwargs["input_dim"]
+        context_dim = posterior_kwargs["context_dim"]
+
+        continuous_flow = DingoMMDiTV2(
+            theta_dim=theta_dim,
+            context_dim=context_dim,
             # Transformer
-            hidden_dim=posterior_kwargs["hidden_dims"],
+            hidden_dim=posterior_kwargs["hidden_dim"],
             depth=posterior_kwargs["depth"],
             heads=posterior_kwargs["heads"],
-            num_tokens=posterior_kwargs["num_tokens"],
+            context_num_tokens=posterior_kwargs.get("context_num_tokens", 4),
+            theta_num_tokens=posterior_kwargs.get("theta_num_tokens", 2),
+            is_individual=posterior_kwargs.get("is_individual", False),
         )
         # total_params = sum(p.numel() for p in continuous_flow.parameters() if p.requires_grad)
         # print(f"Total trainable parameters: {total_params}")
+        model = ContinuousFlowModelV2(
+        continuous_flow,
+        )
     else:
+        theta_dim = posterior_kwargs["input_dim"]
+        context_dim = posterior_kwargs["context_dim"]
+
+        # get embeddings modules for context
+        if embedding_kwargs is not None:
+            context_embedding_kwargs = copy.deepcopy(embedding_kwargs)
+            if initial_weights is not None:
+                context_embedding_kwargs["V_rb_list"] = initial_weights["V_rb_list"]
+            elif "V_rb_list" not in context_embedding_kwargs:
+                context_embedding_kwargs["V_rb_list"] = None
+
+            context_embedding = create_enet_with_projection_layer_and_dense_resnet(
+                **context_embedding_kwargs
+            )
+        else:
+            context_embedding = torch.nn.Identity()
+
+        # get embeddings modules for theta (which is actually cat(t, theta))
+        if "theta_embedding_kwargs" in posterior_kwargs:
+            theta_embedding = get_theta_embedding_net(
+                posterior_kwargs["theta_embedding_kwargs"],
+                input_dim=theta_dim + 1,
+            )
+        else:
+            theta_embedding = torch.nn.Identity()
+
+        # get output dimensions of embedded context and theta
+        theta_with_glu = posterior_kwargs.get("theta_with_glu", False)
+        context_with_glu = posterior_kwargs.get("context_with_glu", False)
+        embedded_theta_dim = theta_embedding(torch.zeros(10, theta_dim + 1)).shape[1]
+
+        glu_dim = theta_with_glu * embedded_theta_dim + context_with_glu * context_dim
+        input_dim = embedded_theta_dim + context_dim - glu_dim
+        if glu_dim == 0:
+            glu_dim = None
+
+        activation_fn = torchutils.get_activation_function_from_string(
+            posterior_kwargs["activation"]
+        )
+
+        real_context_dim = posterior_kwargs["context_dim"] 
+        total_input_dim = real_context_dim + embedded_theta_dim
         continuous_flow = DenseResidualNet(
             input_dim=input_dim,
             output_dim=theta_dim,
@@ -250,13 +290,13 @@ def create_cf_model(
         # total_params = sum(p.numel() for p in continuous_flow.parameters() if p.requires_grad)
         # print(f"Total trainable parameters: {total_params}")
 
-    model = ContinuousFlowModel(
-        continuous_flow,
-        context_embedding,
-        theta_embedding,
-        theta_with_glu=posterior_kwargs.get("theta_with_glu", False),
-        context_with_glu=posterior_kwargs.get("context_with_glu", False),
-    )
+        model = ContinuousFlowModel(
+            continuous_flow,
+            context_embedding,
+            theta_embedding,
+            theta_with_glu=posterior_kwargs.get("theta_with_glu", False),
+            context_with_glu=posterior_kwargs.get("context_with_glu", False),
+        )
     return model
 
 

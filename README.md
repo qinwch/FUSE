@@ -19,5 +19,6 @@ cd flow-matching-posterior-estimation/sbi-benchmark/
 python run_sbibm.py --train_dir </path/to/train_dir>
 ```
 
-where the training directory contains a `settings.yaml` file. Example settings can be 
-found in `./flow-matching-posterior-estimation/sbi-benchmark/settings.yaml`.
+where the training directory contains a `settings.yaml` file. MLP example settings can be found in `./flow-matching-posterior-estimation/sbi-benchmark/settings.yaml`.
+While MM-DiT settings can be found in 'flow-matching-posterior-estimation/mmdit_trainning/settings.yaml'
+You can change the yaml to change the network.

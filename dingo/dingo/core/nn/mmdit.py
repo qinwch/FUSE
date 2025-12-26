@@ -223,18 +223,15 @@ class DingoMMDiT(nn.Module):
         nn.init.zeros_(self.head.weight)
         nn.init.zeros_(self.head.bias)
 
-    def forward(self, x, glu_context=None):
+    def forward(self, theta, t, glu_context=None):
         """
-        x: (Batch, input_dim) -> [Context | t | Theta]
+        [Theta | t | Context]
         """
         # 1. Unpack Dingo's concatenated input
         # Context is the encoded strain data
-        ctx_vec = x[:, :self.context_dim]
+        ctx_vec = glu_context
         
-        # t and theta are concatenated by Dingo
-        t_theta_vec = x[:, self.context_dim:]
-        t = t_theta_vec[:, 0:1]         # First column is time t
-        theta_params = t_theta_vec[:, 1:] # Remaining columns are physical parameters
+        theta_params = theta # Remaining columns are physical parameters
 
         # 2. Prepare Condition signal for AdaLN (Time + Context)
         t_emb = self.time_emb_net(t)
@@ -258,3 +255,116 @@ class DingoMMDiT(nn.Module):
         
         return self.head(theta)
     
+class DingoMMDiTV2(nn.Module):
+    """
+    Main MM-DiT model adapted for Dingo GW Posterior Estimation.
+    """
+    def __init__(
+        self,
+        theta_dim: int,       # Theta dimension
+        context_dim: int,     # Dimensionality of the context part
+        hidden_dim: int = 64, # Your experiment showed 64 is better than 128
+        depth: int = 4,
+        heads: int = 4,
+        context_num_tokens: int = 4,   # Number of tokens to split the context vector into
+        theta_num_tokens: int = 4,      # Number of tokens to split the theta vector into
+        is_individual: bool = False,
+    ):
+        super().__init__()
+        self.context_dim = context_dim
+        self.context_num_tokens = context_num_tokens
+        self.theta_num_tokens = theta_num_tokens
+        self.hidden_dim = hidden_dim
+        self.is_individual = is_individual
+        # dingo input x: [Context | t | Theta]
+        # So theta part length is: input_dim - context_dim - 1 (for t)
+        
+        # 1. Time Embedding (Flow steering signal)
+        self.time_emb_net = TimeStepEmbedding(hidden_dim)
+        
+        # 2. Input Projections (Vector to Sequence)
+        self.ctx_proj = nn.Sequential(
+            nn.Linear(context_dim, hidden_dim * context_num_tokens),
+            nn.SiLU(),
+            nn.Linear(hidden_dim * context_num_tokens, hidden_dim * context_num_tokens)
+        )
+        if not is_individual:
+            self.theta_proj = nn.Sequential(
+                nn.Linear(self.theta_params_dim, hidden_dim * theta_num_tokens),
+                nn.SiLU(),
+                nn.Linear(hidden_dim * theta_num_tokens, hidden_dim * theta_num_tokens)
+            )
+        else:
+            self.theta_proj = nn.Sequential(
+                nn.Linear(1, hidden_dim * theta_num_tokens),
+                nn.SiLU(),
+                nn.Linear(hidden_dim * theta_num_tokens, hidden_dim * theta_num_tokens)
+            )
+
+        # 3. Learnable Positional Embeddings
+        self.ctx_pos_embed = nn.Embedding(context_num_tokens, hidden_dim)
+        if not is_individual:
+            self.theta_pos_embed = nn.Embedding(theta_num_tokens, hidden_dim)
+        else:
+            self.theta_pos_embed = nn.Embedding(theta_num_tokens*theta_dim, hidden_dim)
+        
+        # 4. Global Condition Projector (Injects strain information into AdaLN)
+        self.cond_proj = nn.Sequential(
+            nn.Linear(context_dim, hidden_dim),
+            nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim)
+        )
+
+        # 5. MM-DiT Transformer Blocks
+        self.blocks = nn.ModuleList([
+            MMDiTBlock(hidden_dim, heads, dim_head=hidden_dim // heads, dim_cond=hidden_dim)
+            for _ in range(depth)
+        ])
+
+        # 6. Final Output Head
+        self.final_norm = RMSNorm(hidden_dim)
+        if not is_individual:
+            self.head = nn.Linear(hidden_dim * theta_num_tokens, theta_dim)
+        else:
+            self.head = nn.Linear(hidden_dim * theta_num_tokens, 1)
+        
+    def forward(self, theta, t, glu_context=None):
+        """
+        [Theta | t | Context]
+        """
+        # 1. Unpack Dingo's concatenated input
+        # Context is the encoded strain data
+        ctx_vec = glu_context.to(theta.device)
+        
+        theta_params = theta # Remaining columns are physical parameters
+
+        # 2. Prepare Condition signal for AdaLN (Time + Context)
+        t_emb = self.time_emb_net(t)
+        c_emb = self.cond_proj(ctx_vec)
+        cond = t_emb + c_emb 
+
+        # 3. Project vectors into tokens and add position information
+        ctx = rearrange(self.ctx_proj(ctx_vec), 'b (n d) -> b n d', n=self.context_num_tokens)
+        if not self.is_individual:
+            theta_params = rearrange(self.theta_proj(theta), 'b (n d) -> b n d', n=self.theta_num_tokens)
+        else:
+            theta_params = theta[..., None]
+            theta_params = rearrange(self.theta_proj(theta_params), 'b t (n d) -> b (t n) d', n=self.theta_num_tokens)
+        
+        ctx = ctx + self.ctx_pos_embed(torch.arange(self.context_num_tokens, device=ctx.device))[None, :, :]
+        theta_params = theta_params + self.theta_pos_embed(torch.arange(theta_params.shape[1], device=theta_params.device))[None, :, :]
+
+        # 4. Pass through MM-DiT Blocks
+        for block in self.blocks:
+            ctx, theta_params = block(ctx, theta_params, cond)
+
+        # 5. Final Output (Sequence to Vector)
+        theta_params = self.final_norm(theta_params)
+        if not self.is_individual:
+            theta_params = rearrange(theta_params, 'b n d -> b (n d)')
+            return self.head(theta_params)
+        else:
+            theta_params = rearrange(theta_params, 'b (t n) d -> b t (n d)', n=self.theta_num_tokens)
+            out = self.head(theta_params)
+            return out.squeeze(-1)
+        
