@@ -15,15 +15,13 @@ import numpy as np
 import yaml
 import wandb
 from torch.utils.data import Dataset
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 
 from dingo.core.posterior_models.build_model import (
     build_model_from_kwargs,
     autocomplete_model_kwargs,
 )
 from dingo.core.utils import build_train_and_test_loaders, RuntimeLimits
-
-# from c2st import c2st
 
 class SbiDataset(Dataset):
     def __init__(self, theta, x):
