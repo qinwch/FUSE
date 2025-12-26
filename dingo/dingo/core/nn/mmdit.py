@@ -271,6 +271,7 @@ class DingoMMDiTV2(nn.Module):
         is_individual: bool = False,
     ):
         super().__init__()
+        self.theta_dim = theta_dim
         self.context_dim = context_dim
         self.context_num_tokens = context_num_tokens
         self.theta_num_tokens = theta_num_tokens
@@ -290,7 +291,7 @@ class DingoMMDiTV2(nn.Module):
         )
         if not is_individual:
             self.theta_proj = nn.Sequential(
-                nn.Linear(self.theta_params_dim, hidden_dim * theta_num_tokens),
+                nn.Linear(self.theta_dim, hidden_dim * theta_num_tokens),
                 nn.SiLU(),
                 nn.Linear(hidden_dim * theta_num_tokens, hidden_dim * theta_num_tokens)
             )
