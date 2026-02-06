@@ -262,6 +262,194 @@ class ContinuousFlowsBase(Base):
         """
         return torch.tensor([0.0, 1.0 - self.eps]).type(torch.float32).to(self.device)
 
+class ContinuousFlowsEuler(ContinuousFlowsBase):
+    """
+    Euler version of ContinuousFlowsBase.
+    Handcrafted explicit Euler integrator embedded directly into:
+      - sample_batch
+      - log_prob_batch
+      - sample_and_log_prob_batch
+
+    Adds:
+      1) training timestep sampler (uniform for now)
+      2) sampling timestep scheduler (uniform for now)
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # print(self.model_kwargs)
+        euler_steps = self.model_kwargs["posterior_kwargs"].get("euler_steps", 200)
+        # if euler_steps <= 0:
+        #     raise ValueError("euler_steps must be a positive integer.")
+        self.euler_steps = int(euler_steps)
+        print(f"Using Euler integrator with {self.euler_steps} steps.")
+
+    # ------------------------------------------------------------
+    # (1) Training-time timestep sampler (uniform for now)
+    # ------------------------------------------------------------
+    def sample_train_timesteps(self, batch_size: int) -> torch.Tensor:
+        """
+        Sample timesteps used during training objectives (e.g., flow matching).
+        For now: uniform on [0, 1-eps].
+
+        Returns
+        -------
+        t : torch.Tensor, shape [B]
+        """
+        # using same device/dtype conventions as model
+        t0 = float(self.integration_range[0].item())
+        t1 = float(self.integration_range[1].item())
+        u = torch.rand(batch_size, device=self.device)
+        return (t0 + (t1 - t0) * u).to(torch.float32)
+
+    # ------------------------------------------------------------
+    # (2) Sampling-time timestep scheduler (uniform grid for now)
+    # ------------------------------------------------------------
+    def make_sampling_schedule(self, steps: int = None, reverse: bool = False) -> torch.Tensor:
+        """
+        Create a time grid for Euler integration.
+        For now: uniform grid including endpoints.
+
+        Parameters
+        ----------
+        steps : int
+            number of Euler steps; defaults to self.euler_steps
+        reverse : bool
+            if True, returns grid from t1 -> t0
+
+        Returns
+        -------
+        ts : torch.Tensor, shape [steps+1]
+        """
+        if steps is None:
+            steps = self.euler_steps
+        steps = int(steps)
+        if steps <= 0:
+            raise ValueError("steps must be a positive integer.")
+
+        t0 = self.integration_range[0].item()
+        t1 = self.integration_range[1].item()
+
+        if not reverse:
+            return torch.linspace(t0, t1, steps + 1, device=self.device, dtype=torch.float32)
+        else:
+            return torch.linspace(t1, t0, steps + 1, device=self.device, dtype=torch.float32)
+
+    # ------------------------------------------------------------
+    # Euler forward: theta_0 -> theta_1
+    # ------------------------------------------------------------
+    def sample_batch(self, *context_data, batch_size: int = None):
+        """
+        Euler forward integration: theta_0 -> theta_1
+        """
+        self.network.eval()
+
+        if len(context_data) == 0 and batch_size is None:
+            raise ValueError("For unconditional sampling, the batch size needs to be set.")
+        elif len(context_data) > 0:
+            if batch_size is not None:
+                raise ValueError(
+                    "For conditional sampling, batch_size cannot be set manually; "
+                    "it is determined by context_data."
+                )
+            batch_size = len(context_data[0])
+
+        with torch.no_grad():
+            theta = self.sample_theta_0(batch_size)  # theta_0
+            ts = self.make_sampling_schedule(reverse=False)
+
+            # explicit Euler loop
+            for k in range(len(ts) - 1):
+                t = ts[k].to(theta.device, theta.dtype).repeat(batch_size)
+                dt = (ts[k + 1] - ts[k]).to(theta.device, theta.dtype)
+                vf = self.evaluate_vectorfield(t, theta, *context_data)
+                theta = theta + dt * vf
+
+        self.network.train()
+        return theta  # theta_1
+
+    # ------------------------------------------------------------
+    # Euler backward joint ODE: [theta_1, 0] -> [theta_0, div]
+    # ------------------------------------------------------------
+    def log_prob_batch(self, theta, *context_data, hutchinson=False):
+        """
+        Euler backward integration of joint ODE:
+            y = [theta_t, div_t]
+        from t = 1-eps down to 0.
+
+        Returns
+        -------
+        log_prob(theta) : torch.Tensor, shape [B]
+            computed as log p0(theta_0) - integrated_divergence
+        """
+        self.network.eval()
+
+        with torch.no_grad():
+            y = torch.cat(
+                (theta, torch.zeros((theta.shape[0], 1), device=theta.device, dtype=theta.dtype)),
+                dim=1,
+            )
+            ts = self.make_sampling_schedule(reverse=True)
+
+            for k in range(len(ts) - 1):
+                t = ts[k].to(theta.device, theta.dtype).repeat(theta.shape[0])
+                dt = (ts[k + 1] - ts[k]).to(theta.device, theta.dtype).repeat(theta.shape[0])
+
+                rhs = self.rhs_of_joint_ode(t, y, *context_data, hutchinson=hutchinson)
+                y = y + dt * rhs
+
+            theta_0, divergence = y[:, :-1], y[:, -1]
+            log_prior = compute_log_prior(theta_0)
+            out = (log_prior - divergence).detach()
+
+        self.network.train()
+        return out
+
+    # ------------------------------------------------------------
+    # Euler forward joint ODE: [theta_0, log p0(theta_0)] -> [theta_1, log p1(theta_1)]
+    # ------------------------------------------------------------
+    def sample_and_log_prob_batch(self, *context_data, batch_size: int = None):
+        """
+        Euler forward integration of joint ODE:
+            y = [theta_t, logp_t]
+        starting at:
+            theta_0 ~ p0
+            logp_0 = log p0(theta_0)
+        ending at:
+            theta_1
+            logp_1 = log p1(theta_1)
+        """
+        self.network.eval()
+
+        if len(context_data) == 0 and batch_size is None:
+            raise ValueError("For unconditional sampling, the batch size needs to be set.")
+        elif len(context_data) > 0:
+            if batch_size is not None:
+                raise ValueError(
+                    "For conditional sampling, batch_size cannot be set manually; "
+                    "it is determined by context_data."
+                )
+            else:
+                batch_size = len(context_data[0])
+
+        with torch.no_grad():
+            theta_0 = self.sample_theta_0(batch_size)
+            logp_0 = compute_log_prior(theta_0)
+            y = torch.cat((theta_0, logp_0.unsqueeze(1)), dim=1)
+
+            ts = self.make_sampling_schedule(reverse=False)
+
+            for k in range(len(ts) - 1):
+                t = ts[k].to(theta_0.device, theta_0.dtype).repeat(batch_size)
+                dt = (ts[k + 1] - ts[k]).to(theta_0.device, theta_0.dtype).repeat(batch_size)
+
+                rhs = self.rhs_of_joint_ode(t, y, *context_data, hutchinson=False)
+                y = y + dt * rhs
+
+            theta_1, logp_1 = y[:, :-1], y[:, -1]
+
+        self.network.train()
+        return theta_1, logp_1
 
 def compute_divergence(y, x):
     div = 0.0

@@ -108,6 +108,7 @@ class ContinuousFlowModel(nn.Module):
 
     def forward(self, t, theta, *context):
         # embed theta (self.embedding_net_theta might just be identity)
+        t_and_theta_embedding = torch.cat((t.unsqueeze(1), theta), dim=1)
         t_and_theta_embedding = self.theta_embedding_net(t_and_theta_embedding)
         # for unconditional forward pass
         if len(context) == 0:
@@ -227,11 +228,11 @@ def create_cf_model(
             depth=posterior_kwargs["depth"],
             heads=posterior_kwargs["heads"],
             context_num_tokens=posterior_kwargs.get("context_num_tokens", 4),
-            theta_num_tokens=posterior_kwargs.get("theta_num_tokens", 2),
+            theta_num_tokens=posterior_kwargs.get("theta_num_tokens", theta_dim),
             is_individual=posterior_kwargs.get("is_individual", False),
         )
-        # total_params = sum(p.numel() for p in continuous_flow.parameters() if p.requires_grad)
-        # print(f"Total trainable parameters: {total_params}")
+        total_params = sum(p.numel() for p in continuous_flow.parameters() if p.requires_grad)
+        print(f"Total trainable parameters: {total_params}")
         model = ContinuousFlowModelV2(
         continuous_flow,
         )
@@ -287,8 +288,8 @@ def create_cf_model(
             batch_norm=posterior_kwargs["batch_norm"],
             context_features=glu_dim,
         )
-        # total_params = sum(p.numel() for p in continuous_flow.parameters() if p.requires_grad)
-        # print(f"Total trainable parameters: {total_params}")
+        total_params = sum(p.numel() for p in continuous_flow.parameters() if p.requires_grad)
+        print(f"Total trainable parameters: {total_params}")
 
         model = ContinuousFlowModel(
             continuous_flow,

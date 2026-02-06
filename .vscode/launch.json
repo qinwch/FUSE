@@ -9,7 +9,7 @@
             "justMyCode": false,
             "cwd": "${workspaceFolder}/flow-matching-posterior-estimation/sbi-benchmark",
             "args": [
-                "--train_dir", "/home/vrlab/GW/flowmatching_record/experiment/MLP/lotka_volterra",
+                "--train_dir", "/home/qinwch/flowmatching_record/experiment/MLP/lotka_volterra",
             ]
         }
     ]

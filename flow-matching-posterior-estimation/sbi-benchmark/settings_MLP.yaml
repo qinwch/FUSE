@@ -23,6 +23,7 @@ model:
     type: DenseResidualNet 
     # Other options: mmdit
   type: flow_matching
+  repeated_batch_size: 1
 task:
   name: two_moons
   # Other options: bernoulli_glm, bernoulli_glm_raw, gaussian_linear, gaussian_linear_uniform, gaussian_mixture, lotka_volterra, sir, slcp, slcp_distractors

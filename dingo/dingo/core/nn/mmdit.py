@@ -92,10 +92,12 @@ class JointAttention(nn.Module):
         q = torch.cat((qc, qt), dim=2)
         k = torch.cat((kc, kt), dim=2)
         v = torch.cat((vc, vt), dim=2)
-
+        
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
         attn = dots.softmax(dim=-1)
         out = torch.matmul(attn, v)
+
+        # out = F.scaled_dot_product_attention(q, k, v)
 
         # Separate back to context and theta
         out_ctx = out[:, :, :ctx.shape[1], :]

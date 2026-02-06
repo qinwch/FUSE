@@ -60,7 +60,7 @@ namespaces = false
 
 [tool.setuptools_scm]
 write_to = "dingo/_version.py"
-
+fallback_version = "0.0.0" 
 
 [project.urls]
 homepage = "https://github.com/dingo-gw/dingo"

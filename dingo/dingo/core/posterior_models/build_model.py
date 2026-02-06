@@ -1,7 +1,7 @@
 import torch
 
 from dingo.core.posterior_models.normalizing_flow import NormalizingFlow
-from dingo.core.posterior_models.flow_matching import FlowMatching
+from dingo.core.posterior_models.flow_matching import FlowMatching, FlowMatching_Augmentation, FlowMatchingV2_with_v_pred_mcmc
 from dingo.core.posterior_models.score_matching import ScoreDiffusion
 
 
@@ -29,6 +29,8 @@ def build_model_from_kwargs(filename=None, settings=None, **kwargs):
         "flow_matching": FlowMatching,
         "score_matching": ScoreDiffusion,
         "mmdit": FlowMatching,
+        "flow_matching_aug": FlowMatching_Augmentation,
+        "flow_matching_v2_with_v_pred_mcmc": FlowMatchingV2_with_v_pred_mcmc,
     }
 
     if filename is not None:
@@ -41,6 +43,7 @@ def build_model_from_kwargs(filename=None, settings=None, **kwargs):
         raise ValueError("No valid posterior model specified.")
 
     model = models_dict[type.lower()]
+    print(type)
     # TODO copy the relevant posterior model arguments to posterior model and delete
     # TODO non-necessary arguments currently keeps all arguments for flow_matching and
     # TODO score_matching, e.g., sigma_min for score_matching
