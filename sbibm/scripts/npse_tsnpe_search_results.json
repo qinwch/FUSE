@@ -1,0 +1,16 @@
+{
+    "search_timestamp": "2026-03-27T12:06:00.757360",
+    "search_directory": "/home/vrlab/qinwch/dingo-mmdit/sbibm/sbibm",
+    "npse_search": {
+        "pattern": "NPSE",
+        "total_files_searched": 100,
+        "total_files_with_matches": 0,
+        "results": []
+    },
+    "tsnpe_search": {
+        "pattern": "TSNPE",
+        "total_files_searched": 100,
+        "total_files_with_matches": 0,
+        "results": []
+    }
+}

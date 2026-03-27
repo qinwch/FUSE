@@ -1,0 +1,9 @@
+# Research Log - DINGO + MM-DiT on SBIBM
+
+## Project Overview
+This log documents research activities for applying DINGO with MM-DiT architecture to SBIBM benchmark tasks.
+
+## Date: 2026-03-27
+- Initialized project structure
+- Created scripts/, checkpoints/, and results/ directories
+- Set up utils.py with logging, time measurement, HDF5, and JSON utilities
