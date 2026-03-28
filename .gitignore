@@ -3,3 +3,20 @@ datasets/
 .trae/
 sbi-logs/
 sbibm/scripts/sbi-logs/
+
+# Ignore sbibm directory
+sbibm/
+
+# Ignore results directories
+diffusions-for-sbi/results/
+
+# Ignore benchmark runs
+results/benchmarking_sbi/benchmark_runs/
+results/benchmarking_sbi/outputs/
+
+# Ignore orbit_train outputs
+orbit_train/__pycache__/
+orbit_train/plots/__pycache__/
+
+# Ignore flow-matching-posterior-estimation outputs
+flow-matching-posterior-estimation/mmdit_trainning/
