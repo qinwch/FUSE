@@ -16,6 +16,15 @@ import yaml
 import wandb
 from torch.utils.data import Dataset
 from run_sbibm import generate_dataset, load_dataset
+from repro_utils import (
+    dataset_files_exist,
+    ensure_directory,
+    observation_numbers,
+    resolve_generation_batch_size,
+    resolve_optional_path,
+    set_global_seed,
+    should_set_seed,
+)
 
 
 from dingo.core.posterior_models.build_model import (
@@ -65,7 +74,7 @@ def plot_posteriors_and_log_probs(
     plt.savefig(join(train_dir, "posteriors.png"))
 
 
-def complete_model_evaluation(train_dir, settings, dataset, model, metrics, use_wandb=False, save_samples=True):
+def complete_model_evaluation(train_dir, settings, dataset, model, metrics, use_wandb=False, save_samples=True, num_observations=10):
     task = sbibm.get_task(settings["task"]["name"])
     max_batch_size = settings["task"].get("max_batch_size", 500)
     metrics_dict = {'c2st': c2st, 'ksd': ksd, 'mmd': mmd, 'posterior_mean_error': posterior_mean_error,
@@ -73,7 +82,7 @@ def complete_model_evaluation(train_dir, settings, dataset, model, metrics, use_
     metrics = [m for m in metrics if m in metrics_dict.keys()]
     result_list = []
 
-    for obs in range(1, 10):
+    for obs in observation_numbers(num_observations):
         reference_samples = task.get_reference_posterior_samples(num_observation=obs)
         num_samples = len(reference_samples)
         reference_samples_standardized = dataset.standardize(
@@ -180,6 +189,14 @@ if __name__ == "__main__":
         "--dataset_dir"
     )
     parser.add_argument('--metrics', nargs='+', default=metrics)
+    parser.add_argument("--num_observations", type=int, default=10)
+    parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument(
+        "--generation_batch_size",
+        type=int,
+        default=None,
+        help="Batch size used when generating simulator data.",
+    )
     args = parser.parse_args()
 
     with open(join(args.train_dir, "settings.yaml"), "r") as f:
@@ -191,13 +208,21 @@ if __name__ == "__main__":
 
         wandb.init(config=settings, dir=args.train_dir, **settings["training"]["wandb"])
 
-    if args.dataset_dir is not None and os.path.exists(join(args.dataset_dir, 'x.npy')):
-        dataset = load_dataset(args.dataset_dir)
+    if should_set_seed(args.seed):
+        set_global_seed(args.seed)
+    dataset_dir = resolve_optional_path(args.dataset_dir)
+    ensure_directory(dataset_dir)
+    if dataset_files_exist(dataset_dir):
+        dataset = load_dataset(dataset_dir, settings=settings)
     else:
+        generation_batch_size = resolve_generation_batch_size(
+            args.generation_batch_size,
+            settings["task"].get("batch_size", 1000),
+        )
         dataset = generate_dataset(
             settings,
-            batch_size=settings["task"].get("batch_size", 1000),
-            directory_save=args.dataset_dir
+            batch_size=generation_batch_size,
+            directory_save=dataset_dir,
         )
 
     train_loader, test_loader = build_train_and_test_loaders(
@@ -212,4 +237,12 @@ if __name__ == "__main__":
         device=settings["training"].get("device", "cpu"),
     )
 
-    complete_model_evaluation(args.train_dir, settings, dataset, model, args.metrics, use_wandb=use_wandb)
+    complete_model_evaluation(
+        args.train_dir,
+        settings,
+        dataset,
+        model,
+        args.metrics,
+        use_wandb=use_wandb,
+        num_observations=args.num_observations,
+    )

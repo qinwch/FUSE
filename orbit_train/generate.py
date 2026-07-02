@@ -6,11 +6,20 @@ the test set is 64 times.
 
 from helpers import Simulator, Prior
 import argparse
+from pathlib import Path
+from path_config import DEFAULT_ORBIT_PATHS, OrbitPaths
 from orbitize import read_input, DATADIR
 from orbitize.system import seppa2radec, transform_errors
 from lampe.data import H5Dataset, JointLoader
 
-def main(size, name):
+def main(size, name, data_dir):
+    paths = OrbitPaths(
+        data_dir=Path(data_dir),
+        models_dir=DEFAULT_ORBIT_PATHS.models_dir,
+        outputs_dir=DEFAULT_ORBIT_PATHS.outputs_dir,
+        references_dir=DEFAULT_ORBIT_PATHS.references_dir,
+    )
+    paths.ensure_directories()
     data_table = read_input.read_file('{}/betaPic.csv'.format(DATADIR))
 
     # Discard the  RV observation, as we do not take it into account in the model
@@ -50,17 +59,17 @@ def main(size, name):
 
     H5Dataset.store(
         loader, 
-        f'datasets/{name}-test.h5', 
+        str(paths.test_dataset(name)),
         size=(2**size)//64, # 130.000
         overwrite=True)
     H5Dataset.store(
         loader, 
-        f'datasets/{name}-val.h5', 
+        str(paths.val_dataset(name)),
         size=(2**size)//8, # 1.000.000
         overwrite=True)
     H5Dataset.store(
         loader, 
-        f'datasets/{name}-train.h5', 
+        str(paths.train_dataset(name)),
         size=2**size, # 8.400.000
         overwrite=True)
 
@@ -68,7 +77,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Generate betapic datasets")
     parser.add_argument("--size", type=int, default=23, help="The exponent of 2 for the training dataset size")
-    parser.add_argument("--name", type=str, default="betapic", help="Base name for datasets")
+    parser.add_argument("--name", type=str, default="orbit", help="Base name for datasets")
+    parser.add_argument("--data-dir", type=str, default=str(DEFAULT_ORBIT_PATHS.data_dir), help="Directory for generated HDF5 datasets")
     args = parser.parse_args()
 
-    main(args.size, args.name)
+    main(args.size, args.name, args.data_dir)

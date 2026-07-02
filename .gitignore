@@ -6,17 +6,59 @@ sbibm/scripts/sbi-logs/
 
 # Ignore sbibm directory
 sbibm/
-
 # Ignore results directories
 diffusions-for-sbi/results/
-
 # Ignore benchmark runs
 results/benchmarking_sbi/benchmark_runs/
 results/benchmarking_sbi/outputs/
-
 # Ignore orbit_train outputs
 orbit_train/__pycache__/
 orbit_train/plots/__pycache__/
-
 # Ignore flow-matching-posterior-estimation outputs
 flow-matching-posterior-estimation/mmdit_trainning/
+# FUSE public release ignores
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+# Environments
+.venv/
+venv/
+fmpe-venv/
+.conda/
+# Logs and experiment trackers
+*.log
+*.out
+*.err
+wandb/
+runs/
+tensorboard/
+lightning_logs/
+# Large datasets and model artifacts
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+# Small test fixtures that are required by tests may be committed deliberately.
+!dingo/tests/**/*.npy
+!dingo/tests/**/*.npz
+# Generated paper and experiment outputs
+artifacts/
+outputs/
+paper_outputs/
+results/
+flowmatching_record/
+orbit_train/datasets/
+flow-matching-posterior-estimation/gravitational-waves/datasets/*.hdf5
+flow-matching-posterior-estimation/gravitational-waves/datasets/*.h5
+# Local editor and OS files
+.DS_Store
+.vscode/
+# Private release triage notes
+OPEN_QUESTIONS.md
+docs/superpowers/

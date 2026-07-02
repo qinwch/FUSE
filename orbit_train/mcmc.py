@@ -1,9 +1,14 @@
-import numpy as np
-import orbitize
-from orbitize import read_input, system, priors, sampler
-import matplotlib.pyplot as plt
+import argparse
+from pathlib import Path
 
-def main():
+from path_config import DEFAULT_ORBIT_PATHS
+
+
+def main(output, num_temps, num_walkers, n_orbs, num_threads):
+    import numpy as np
+    import orbitize
+    from orbitize import read_input, system, priors, sampler
+
     data_table = read_input.read_file('{}/betaPic.csv'.format(orbitize.DATADIR))
     data_table = data_table[:-1] # Discard the RV observation, as we do not take it into account in the model
 
@@ -39,16 +44,19 @@ def main():
     # 6. TAU: 0 - 1
     sys.sys_priors[lab['tau1']] = priors.UniformPrior(0.0, 1.0)
 
-    # number of temperatures & walkers for MCMC
-    num_temps = 20
-    num_walkers = 1000
+    mcmc_sampler = sampler.MCMC(sys, num_temps, num_walkers, num_threads=num_threads)
 
-    # number of steps to take
-    n_orbs = 10000000
-
-    mcmc_sampler = sampler.MCMC(sys, num_temps, num_walkers, num_threads=32)
-
-    _ = mcmc_sampler.run_sampler(n_orbs, output_filename='mcmc_betapic.hdf5')
+    output_path = Path(output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    _ = mcmc_sampler.run_sampler(n_orbs, output_filename=str(output_path))
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="Run the betapic PTMCMC reference sampler")
+    parser.add_argument("--output", type=str, default=str(DEFAULT_ORBIT_PATHS.reference_path("mcmc_betapic.hdf5")), help="Output HDF5 filename")
+    parser.add_argument("--num-temps", type=int, default=20, help="Number of MCMC temperatures")
+    parser.add_argument("--num-walkers", type=int, default=1000, help="Number of MCMC walkers")
+    parser.add_argument("--n-orbs", type=int, default=10000000, help="Number of MCMC steps")
+    parser.add_argument("--num-threads", type=int, default=32, help="Number of sampler threads")
+    args = parser.parse_args()
+
+    main(args.output, args.num_temps, args.num_walkers, args.n_orbs, args.num_threads)

@@ -1,0 +1,26 @@
+name: fuse-artifact
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - pyyaml
+  - h5py
+  - tqdm
+  - pip:
+      - torch
+      - torchvision
+      - sbibm
+      - lampe
+      - zuko
+      - orbitize
+      - wandb
+      - torchdiffeq
+      - einops
+      - -e ./dingo

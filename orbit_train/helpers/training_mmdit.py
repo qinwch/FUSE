@@ -18,6 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 import math
+from pathlib import Path
 
 # -----------------------------------------------------------------------------
 # Basic Components
@@ -384,7 +385,8 @@ def train_mmdit(trainset,
           initial_lr=1e-3,
           weight_decay=1e-2, 
           clip=1.0,
-          use_wandb=False):
+          use_wandb=False,
+          save_path=None):
 
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -477,8 +479,11 @@ def train_mmdit(trainset,
             tq.set_postfix(loss=train_loss.mean(), val_loss=valid_loss.mean())
 
     # 保存模型
-    save_path = f"models/{wandb.run.name}.pth" if use_wandb else "models/betapic_mmdit.pth"
-    torch.save(estimator.state_dict(), save_path) # 建议只保存 state_dict，更加稳健
+    if save_path is None:
+        save_path = f"models/{wandb.run.name}.pth" if use_wandb else "models/betapic_mmdit.pth"
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(estimator.state_dict(), str(save_path)) # 建议只保存 state_dict，更加稳健
     print(f"Model saved to {save_path}")
     
     if use_wandb:

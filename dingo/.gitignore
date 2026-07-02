@@ -143,6 +143,9 @@ dmypy.json
 *.hdf5
 *.npy
 *.npz
+# Small test fixtures that are required by tests may be committed deliberately.
+!tests/**/*.npy
+!tests/**/*.npz
 *.dat
 
 # .DS_Store files for Mac OS
