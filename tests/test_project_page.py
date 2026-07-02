@@ -1,3 +1,4 @@
+import hashlib
 import re
 import unittest
 from pathlib import Path
@@ -23,7 +24,10 @@ REQUIRED_ASSETS = [
     "sbibm-benchmark.png",
     "beta-pictoris.png",
     "best-of-n.png",
+    "project-page-qr.svg",
 ]
+
+PROJECT_PAGE_QR_SHA256 = "769df801045661f75a999930f37e539e5c6f7b943ef8a4d292b04791d0fe56da"
 
 PRIVATE_MARKERS = [
     "/Users/",
@@ -119,7 +123,7 @@ class ProjectPageTests(unittest.TestCase):
     def test_images_have_alt_text_and_use_assets(self):
         html = read_text(INDEX)
         images = re.findall(r'<img\s+([^>]+)>', html)
-        self.assertEqual(len(images), 4)
+        self.assertEqual(len(images), 5)
         for attrs in images:
             src = attr_value(attrs, "src")
             alt = attr_value(attrs, "alt")
@@ -128,6 +132,12 @@ class ProjectPageTests(unittest.TestCase):
             self.assertTrue(alt.strip(), attrs)
             self.assertTrue(src.startswith("assets/"), src)
             self.assertNotIn("screenshot", src.lower())
+
+    def test_qr_code_is_stable_for_canonical_project_url(self):
+        html = read_text(INDEX)
+        self.assertIn("https://qinwch.github.io/FUSE/", html)
+        qr_bytes = (ASSETS / "project-page-qr.svg").read_bytes()
+        self.assertEqual(hashlib.sha256(qr_bytes).hexdigest(), PROJECT_PAGE_QR_SHA256)
 
     def test_required_public_copy_is_present(self):
         html = read_text(INDEX)

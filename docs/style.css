@@ -177,6 +177,21 @@ figcaption {
   margin: 24px auto 0;
 }
 
+.qr-code {
+  width: 176px;
+  margin: 24px 0 0;
+}
+
+.qr-code img {
+  aspect-ratio: 1;
+  padding: 12px;
+}
+
+.qr-code figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
 pre {
   overflow-x: auto;
   margin: 0;
