@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="FUSE project page: FK-steered multi-modal flow matching for efficient simulation-based posterior estimation.">
+    <title>FUSE | FK-Steered Multi-Modal Flow Matching</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <p class="venue">ICML 2026</p>
+        <h1>FUSE: FK-Steered Multi-Modal Flow Matching for Efficient Simulation-Based Posterior Estimation</h1>
+
+        <p class="authors">
+          <span>Weichen Qin<sup>1</sup></span>,
+          <span>Yufan Xie<sup>1</sup></span>,
+          <span>Peihao Wang<sup>3</sup></span>,
+          <span>Chia-Jui Chou<sup>1</sup></span>,
+          <span>Minghui Du<sup>4,5</sup></span>,
+          <span>Peng Xu<sup>4,5</sup></span>,
+          <span>Ziren Luo<sup>4,5</sup></span>,
+          <span>Yi Yang<sup>1</sup></span>,
+          <span>Jingyi Yu<sup>1</sup></span>,
+          <span>Bo Liang<sup>4,5</sup></span>, and
+          <span>Jiakai Zhang<sup>1,2</sup></span>
+        </p>
+
+        <p class="affiliations">
+          <sup>1</sup>ShanghaiTech University &nbsp;
+          <sup>2</sup>Cellverse Co., Ltd &nbsp;
+          <sup>3</sup>The University of Texas at Austin &nbsp;
+          <sup>4</sup>Institute of Mechanics, Chinese Academy of Sciences &nbsp;
+          <sup>5</sup>Taiji Laboratory for Gravitational Wave Universe
+        </p>
+
+        <div class="resource-links" aria-label="Project links">
+          <a class="resource-link" href="assets/fuse-paper.pdf">Paper</a>
+          <a class="resource-link" href="https://openreview.net/forum?id=evIBAgZPjC">OpenReview</a>
+          <span class="resource-link is-disabled" aria-disabled="true">Code coming soon</span>
+          <span class="resource-link is-disabled" aria-disabled="true">Hugging Face coming soon</span>
+          <span class="resource-link is-disabled" aria-disabled="true">Data coming soon</span>
+        </div>
+        <p class="version-note">Paper: Author camera-ready version</p>
+
+        <p class="tldr">
+          <strong>TL;DR:</strong> FUSE combines multi-modal flow matching with
+          Feynman-Kac-steered sampling for efficient simulation-based posterior estimation,
+          with strong results on SBIBM benchmarks and real-world beta Pictoris b orbital
+          characterization.
+        </p>
+      </section>
+
+      <section class="media-section" aria-labelledby="method-title">
+        <h2 id="method-title">Method Overview</h2>
+        <figure>
+          <img src="assets/method-pipeline.png" alt="FUSE method pipeline for multi-modal flow matching and FK-steered inference.">
+          <figcaption>
+            FUSE keeps parameter and observation representations in distinct token streams while
+            allowing structured interaction. The main SBIBM comparison evaluates FUSE without
+            FK-steering to isolate architectural gains, while FK-steering is a separate test-time
+            likelihood-informed correction for observation-specific refinement.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="content-section" id="abstract">
+        <h2>Abstract</h2>
+        <p>
+          Simulation-Based Inference is critical for scientific discovery, and generative models
+          offer a promising path toward efficient posterior estimation. Existing methods often
+          struggle with effective multimodal modeling and rely on fusion strategies that ignore
+          structural differences between parameters and observations.
+        </p>
+        <p>
+          FUSE introduces a dual-track architecture that preserves distinct multimodal features
+          while enabling dynamic interaction, together with an FK-steered sampling strategy that
+          uses intermediate observation likelihoods to guide generative trajectories. The method
+          improves posterior fidelity on standard SBI benchmarks and resolves complex degeneracies
+          in beta Pictoris b orbital estimation.
+        </p>
+      </section>
+
+      <section class="content-section" id="results">
+        <h2>Results</h2>
+
+        <article class="result-block">
+          <h3>SBIBM Benchmark</h3>
+          <figure>
+            <img src="assets/sbibm-benchmark.png" alt="SBIBM C2ST benchmark comparison across simulation budgets and tasks.">
+            <figcaption>
+              The 10-task SBIBM benchmark reports FUSE without FK-steering, so the result isolates
+              the MM-DiT architecture from test-time guidance. FUSE is most effective in data-rich
+              regimes and on harder posterior structures such as LV, SLCP, and SLCP-D.
+            </figcaption>
+          </figure>
+        </article>
+
+        <article class="result-block">
+          <h3>beta Pictoris b</h3>
+          <figure>
+            <img src="assets/beta-pictoris.png" alt="beta Pictoris b posterior reconstruction and normalized Sinkhorn comparison.">
+            <figcaption>
+              In the real-world 8-dimensional beta Pictoris b orbital-characterization task,
+              FUSE follows the long-run PTMCMC reference more closely than NPE and FMPE,
+              especially around sharp orientation-parameter degeneracies.
+            </figcaption>
+          </figure>
+
+          <figure class="supporting-figure">
+            <img src="assets/best-of-n.png" alt="Appendix comparison between FUSE FK-steering and Naive Best-of-N selection.">
+            <figcaption>
+              Appendix Figure 5 compares sequential FK-steering with Naive Best-of-N final-step
+              selection. The FK-steered trajectories better preserve high-density posterior
+              structure for beta Pictoris b.
+            </figcaption>
+          </figure>
+        </article>
+      </section>
+
+      <section class="content-section status-section" id="status">
+        <h2>Release Status</h2>
+        <p>
+          Code, model artifacts, and data resources are being prepared for public release. Links
+          will be updated here as soon as they are available.
+        </p>
+        <p>
+          The OpenReview page is linked above. arXiv/PMLR links will be added once public. The
+          current Paper link provides the author camera-ready version.
+        </p>
+      </section>
+
+      <section class="content-section" id="citation">
+        <h2>BibTeX</h2>
+        <pre><code>@inproceedings{qin2026fuse,
+  title     = {FUSE: FK-Steered Multi-Modal Flow Matching for Efficient Simulation-Based Posterior Estimation},
+  author    = {Qin, Weichen and Xie, Yufan and Wang, Peihao and Chou, Chia-Jui and Du, Minghui and Xu, Peng and Luo, Ziren and Yang, Yi and Yu, Jingyi and Liang, Bo and Zhang, Jiakai},
+  booktitle = {Proceedings of the International Conference on Machine Learning},
+  year      = {2026}
+}</code></pre>
+      </section>
+    </main>
+
+    <footer>
+      FUSE project page for ICML 2026.
+    </footer>
+  </body>
+</html>
