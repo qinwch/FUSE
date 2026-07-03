@@ -20,7 +20,7 @@ EXPECTED_RESOURCE_LABELS = [
 
 REQUIRED_ASSETS = [
     "fuse-paper.pdf",
-    "method-pipeline.png",
+    "method-pipeline.svg",
     "sbibm-benchmark.png",
     "beta-pictoris.png",
     "best-of-n.png",
@@ -102,6 +102,26 @@ class ProjectPageTests(unittest.TestCase):
             self.assertEqual(item["tag"], "span")
             self.assertIn("is-disabled", item["attrs"])
 
+    def test_affiliations_match_paper_order(self):
+        html = read_text(INDEX)
+        expected_fragments = [
+            "<span>Peihao Wang<sup>2</sup></span>",
+            "<span>Minghui Du<sup>3,4</sup></span>",
+            "<span>Bo Liang<sup>3,4</sup></span>",
+            "<span>Jiakai Zhang<sup>1,5</sup></span>",
+            "<sup>1</sup>ShanghaiTech University, Shanghai, China",
+            "<sup>2</sup>The University of Texas at Austin, Austin, TX, USA",
+            "<sup>3</sup>Center for Gravitational Wave Experiment, National Microgravity Laboratory, Institute of Mechanics, Chinese Academy of Sciences, Beijing 100190, China",
+            "<sup>4</sup>Taiji Laboratory for Gravitational Wave Universe (Beijing/Hangzhou), University of Chinese Academy of Sciences (UCAS), Beijing 100049, China",
+            "<sup>5</sup>Cellverse, Co., Ltd",
+        ]
+        for fragment in expected_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, html)
+
+        affiliation_positions = [html.index(fragment) for fragment in expected_fragments[4:]]
+        self.assertEqual(affiliation_positions, sorted(affiliation_positions))
+
     def test_no_private_or_author_console_links_in_public_files(self):
         for path in [INDEX, STYLE]:
             text = read_text(path)
@@ -132,6 +152,7 @@ class ProjectPageTests(unittest.TestCase):
             self.assertTrue(alt.strip(), attrs)
             self.assertTrue(src.startswith("assets/"), src)
             self.assertNotIn("screenshot", src.lower())
+        self.assertIn('src="assets/method-pipeline.svg"', html)
 
     def test_qr_code_is_stable_for_canonical_project_url(self):
         html = read_text(INDEX)
