@@ -40,11 +40,11 @@ Large datasets, trained weights, posterior samples, and long-run reference chain
 
 Important current artifact status:
 
-- Orbit datasets are present in the remote workspace at `orbit_train/datasets/` and should be published under `artifacts/orbit/datasets/`.
+- Orbit datasets are external release artifacts and should be published under `artifacts/orbit/datasets/`.
 - The paper orbit MM-DiT checkpoint should be published as `artifacts/orbit/models/orbit_mmdit.pth`; the private staging source is recorded outside the public repository.
 - Figure 5 / Table 6 FK samples, PTMCMC reference chains, timing logs, and Table 6 metric outputs are not included in the first public artifact release.
-- SBIBM scripts are present, and a 10-task FUSE checkpoint/result bundle is present at `FUSE_checkpoint/FUSE_checkpoint.zip`; final public artifact upload is still needed.
-- Gravitational-wave datasets and BBH checkpoints are present locally and listed in `ARTIFACTS.md`, but their paper-result ownership still needs confirmation.
+- SBIBM scripts are present, and a 10-task FUSE checkpoint/result bundle is documented in `FUSE_checkpoint/README.md`; the zip itself is an external artifact and is not committed to Git.
+- Gravitational-wave datasets and BBH checkpoints were identified during release preparation and are listed in `ARTIFACTS.md`, but their paper-result ownership still needs confirmation.
 
 ## Reproducing paper results
 

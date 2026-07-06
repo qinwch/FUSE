@@ -13,7 +13,7 @@ ASSETS = PAGE_ROOT / "assets"
 EXPECTED_RESOURCE_LABELS = [
     "Paper",
     "OpenReview",
-    "Code coming soon",
+    "Code",
     "Hugging Face coming soon",
     "Data coming soon",
 ]
@@ -94,11 +94,11 @@ class ProjectPageTests(unittest.TestCase):
         hrefs = {item["label"]: attr_value(item["attrs"], "href") for item in items}
         self.assertEqual(hrefs["Paper"], "assets/fuse-paper.pdf")
         self.assertEqual(hrefs["OpenReview"], "https://openreview.net/forum?id=evIBAgZPjC")
-        self.assertIsNone(hrefs["Code coming soon"])
+        self.assertEqual(hrefs["Code"], "https://github.com/Kramida/dingo-mmdit")
         self.assertIsNone(hrefs["Hugging Face coming soon"])
         self.assertIsNone(hrefs["Data coming soon"])
 
-        for item in items[2:]:
+        for item in items[3:]:
             self.assertEqual(item["tag"], "span")
             self.assertIn("is-disabled", item["attrs"])
 

@@ -12,6 +12,10 @@ SKIP_TRACKED_PATHS = {
     "tests/test_public_release_guard.py",
 }
 PRIVATE_PATH_PREFIXES = ("docs/superpowers/",)
+GENERATED_ARTIFACT_PATH_PREFIXES = (
+    "diffusions-for-sbi/results/",
+    "flow-matching-posterior-estimation/mmdit_trainning/",
+)
 PRIVATE_NOTE_REFERENCES = ("OPEN_QUESTIONS.md",)
 WITHHELD_SAMPLE_TOKENS = ("sample_soft_new_fk", "orbitize_training_2")
 SECRET_TOKENS = ("example-private-token", "ssh private-host", "密码")
@@ -37,6 +41,9 @@ def find_violations(files: dict[str, str], tracked_paths: list[str] | None = Non
         for prefix in PRIVATE_PATH_PREFIXES:
             if path.startswith(prefix):
                 violations.append(f"{path}: private internal planning path {prefix}")
+        for prefix in GENERATED_ARTIFACT_PATH_PREFIXES:
+            if path.startswith(prefix):
+                violations.append(f"{path}: generated artifact path {prefix}")
 
     for path, text in sorted(files.items()):
         if path.startswith(PRIVATE_PATH_PREFIXES):

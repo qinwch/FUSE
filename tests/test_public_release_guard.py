@@ -82,6 +82,24 @@ class PublicReleaseGuardTest(unittest.TestCase):
             ],
         )
 
+
+    def test_flags_tracked_generated_artifact_paths(self):
+        violations = find_violations(
+            {},
+            tracked_paths=[
+                "diffusions-for-sbi/results/run.pkl",
+                "flow-matching-posterior-estimation/mmdit_trainning/model_latest.pt",
+            ],
+        )
+        self.assertIn(
+            "diffusions-for-sbi/results/run.pkl: generated artifact path diffusions-for-sbi/results/",
+            violations,
+        )
+        self.assertIn(
+            "flow-matching-posterior-estimation/mmdit_trainning/model_latest.pt: generated artifact path flow-matching-posterior-estimation/mmdit_trainning/",
+            violations,
+        )
+
     def test_flags_private_chinese_password_token(self):
         files = {"notes.txt": "登录密码 should not be public.\n"}
         violations = find_violations(files)

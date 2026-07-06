@@ -1,9 +1,9 @@
 # Release Verification
 
-Date: 2026-07-02
+Date: 2026-07-06
 Branch: `main`
-Code verified at commit: `1bd21fd`
-Verification note updated after the pre-push safety fix.
+Code verified at commit: `abc2812` before cleanup commit; generated artifact cleanup is verified by GitHub tree audit.
+Verification note updated after project-page preservation, branch pruning, and generated-artifact cleanup.
 
 ## Checks
 
@@ -44,3 +44,6 @@ These files/directories remain in the remote working tree and were not staged:
 ## Current Known Gaps
 
 Withheld or collaborator-owned artifacts are not included in the first public artifact release. Private triage notes remain outside Git.
+
+| Generated artifact tree audit | pass | Public `main` cleanup removes tracked `diffusions-for-sbi/results/` files and `flow-matching-posterior-estimation/mmdit_trainning/` training outputs; the public guard now flags these prefixes if they reappear. |
+| GitHub branch pruning | pass | GitHub branch refs were pruned so only `main` remains. Project-page commits on `main` are intentionally retained. |
