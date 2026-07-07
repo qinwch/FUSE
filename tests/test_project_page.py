@@ -12,6 +12,7 @@ ASSETS = PAGE_ROOT / "assets"
 
 EXPECTED_RESOURCE_LABELS = [
     "Paper",
+    "arXiv",
     "OpenReview",
     "Code",
     "Hugging Face coming soon",
@@ -93,12 +94,13 @@ class ProjectPageTests(unittest.TestCase):
 
         hrefs = {item["label"]: attr_value(item["attrs"], "href") for item in items}
         self.assertEqual(hrefs["Paper"], "assets/fuse-paper.pdf")
+        self.assertEqual(hrefs["arXiv"], "https://arxiv.org/pdf/2607.05252")
         self.assertEqual(hrefs["OpenReview"], "https://openreview.net/forum?id=evIBAgZPjC")
         self.assertEqual(hrefs["Code"], "https://github.com/Kramida/dingo-mmdit")
         self.assertIsNone(hrefs["Hugging Face coming soon"])
         self.assertIsNone(hrefs["Data coming soon"])
 
-        for item in items[3:]:
+        for item in items[4:]:
             self.assertEqual(item["tag"], "span")
             self.assertIn("is-disabled", item["attrs"])
 
@@ -164,7 +166,8 @@ class ProjectPageTests(unittest.TestCase):
         html = read_text(INDEX)
         for text in [
             "Author camera-ready version",
-            "arXiv/PMLR links will be added once public.",
+            "The arXiv preprint and OpenReview page are linked above.",
+            "The PMLR link will be added once public.",
             "FUSE without FK-steering",
             "test-time",
             "SBIBM Benchmark",
